@@ -70,7 +70,7 @@ jobs:
       - name: 🔍 Vérification des changements
         id: check-changes
         run: |
-          if git diff --quiet public/articles.json; then
+          if git diff --quiet -- public/articles.json; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "ℹ️ Aucun changement dans articles.json"
           else
