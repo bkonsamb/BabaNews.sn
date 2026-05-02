@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+console.log("🚀 BOT START");
 
+try {
 /**
  * BabaNews Bot — Script d'automatisation d'articles
  *
@@ -549,3 +551,7 @@ runBot().catch(err => {
   console.error('❌ Erreur fatale du bot:', err);
   process.exit(1);
 });
+} catch (error) {
+  console.error("❌ BOT ERROR:", error);
+  process.exit(1);
+}
