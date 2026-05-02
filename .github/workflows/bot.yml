@@ -67,6 +67,13 @@ jobs:
           node bot.js
         timeout-minutes: 10
         
+      - name: 🔍 Debug - Vérifier les fichiers générés
+        run: |
+          echo "Répertoire courant: $(pwd)"
+          echo "Contenu de public/:"
+          ls -la public/ || echo "⚠️ Dossier public/ inexistant"
+          find . -name "articles.json" 2>/dev/null || echo "⚠️ articles.json introuvable"
+    
       - name: 📦 Upload articles.json  # ← doit être juste après le bot
         uses: actions/upload-artifact@v4
         with:
