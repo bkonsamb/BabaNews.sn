@@ -1,4 +1,6 @@
+console.log("🚀 BOT START");
 
+try {
 name: BabaNews Bot
 
 on:
@@ -32,3 +34,7 @@ jobs:
           git add .
           git commit -m "Auto news update" || echo "No changes"
           git push
+} catch (error) {
+  console.error("❌ BOT ERROR:", error);
+  process.exit(1);
+}
