@@ -58,8 +58,8 @@ jobs:
         run: |
           echo "📅 Date et heure système (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')"
           echo "📅 Date système locale: $(date '+%Y-%m-%d %H:%M:%S')"
-- name: 📁 Création du répertoire public
-  run: mkdir -p public
+      - name: 📁 Création du répertoire public
+       run: mkdir -p public
       - name: 🤖 Exécution du bot
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
