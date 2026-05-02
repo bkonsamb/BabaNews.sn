@@ -31,7 +31,7 @@ const __dirname = path.dirname(__filename);
 // ============================================================
 const CONFIG = {
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
-  GROQ_MODEL: 'mixtral-8x7b-32768',
+  GROQ_MODEL: 'llama-3.3-70b-versatile',
   MAX_ARTICLES_PER_DAY: 10,
   MIN_ARTICLES: 5,
   OUTPUT_PATH: path.resolve(__dirname, '../public/articles.json'),
