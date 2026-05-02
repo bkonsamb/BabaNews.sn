@@ -1,0 +1,233 @@
+name: 🤖 BabaNews Bot — Actualités Automatiques
+
+on:
+  # Exécution automatique toutes les 30 minutes (06h - 23h UTC)
+  schedule:
+    - cron: '*/30 6-23 * * *'
+  
+  # Déclenchement manuel depuis GitHub
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Forcer la mise à jour des articles'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Permissions nécessaires pour commit + deploy
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "babanews-bot"
+  cancel-in-progress: false
+
+jobs:
+  # ============================================================
+  # JOB 1: Génération des articles
+  # ============================================================
+  generate-articles:
+    name: 📰 Génération des articles du jour
+    runs-on: ubuntu-latest
+    
+    outputs:
+      articles_updated: ${{ steps.check-changes.outputs.changed }}
+    
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⚙️ Configuration Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📦 Installation des dépendances bot
+        run: |
+          echo "✅ Aucune dépendance externe requise pour le bot"
+          node --version
+
+      - name: 🗓️ Affichage de la date système
+        run: |
+          echo "📅 Date et heure système (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "📅 Date système locale: $(date '+%Y-%m-%d %H:%M:%S')"
+
+      - name: 🤖 Exécution du bot
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          echo "🚀 Lancement du bot BabaNews..."
+          node bot.js
+        timeout-minutes: 10
+
+      - name: 🔍 Debug — Vérifier les fichiers générés
+        run: |
+          echo "📂 Répertoire courant: $(pwd)"
+          echo "📁 Contenu de public/:"
+          ls -la public/ || echo "⚠️ Dossier public/ inexistant"
+          echo "🔎 Recherche articles.json:"
+          find . -name "articles.json" 2>/dev/null || echo "⚠️ articles.json introuvable"
+
+      - name: 📦 Upload articles.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: articles-json
+          path: public/articles.json
+          if-no-files-found: error
+
+      - name: 🔍 Vérification des changements
+        id: check-changes
+        run: |
+          # git status --porcelain détecte aussi les fichiers nouveaux (non encore trackés)
+          STATUS=$(git status --porcelain public/articles.json)
+          if [ -z "$STATUS" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Aucun changement dans articles.json"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ articles.json mis à jour !"
+            echo "📊 Aperçu du fichier:"
+            node -e "
+              const fs = require('fs');
+              const articles = JSON.parse(fs.readFileSync('public/articles.json', 'utf8'));
+              console.log('Nombre d articles:', articles.length);
+              articles.forEach((a, i) => {
+                console.log((i+1) + '. [' + a.category + '] ' + a.title.slice(0, 70));
+              });
+            "
+          fi
+
+      - name: 💾 Commit et push des articles
+        if: steps.check-changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "bot@babanews.auto"
+          git config --local user.name "BabaNews Bot 🤖"
+          
+          # -f force l'ajout même si articles.json est dans .gitignore
+          git add -f public/articles.json
+          
+          ARTICLE_COUNT=$(node -e "
+            const fs = require('fs');
+            const d = fs.readFileSync('public/articles.json', 'utf8');
+            process.stdout.write(JSON.parse(d).length.toString());
+          ")
+          
+          DATE_FR=$(date -u '+%d/%m/%Y à %H:%M UTC')
+          
+          git commit -m "📰 BabaNews: ${ARTICLE_COUNT} articles publiés — ${DATE_FR}"
+          git push origin HEAD
+
+      - name: ✅ Résumé
+        run: |
+          echo "==================================================="
+          echo "✅ Bot BabaNews terminé"
+          echo "📅 Date: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "🔄 Articles mis à jour: ${{ steps.check-changes.outputs.changed }}"
+          echo "==================================================="
+          
+  # ============================================================
+  # JOB 2: Build et déploiement sur GitHub Pages
+  # ============================================================
+  build-and-deploy:
+    name: 🚀 Build & Déploiement GitHub Pages
+    runs-on: ubuntu-latest
+    needs: generate-articles
+    # Déploie si les articles ont changé OU si déclenchement manuel
+    if: |
+      needs.generate-articles.outputs.articles_updated == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: 📥 Checkout (avec derniers articles)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: main
+
+      - name: ⚙️ Configuration Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ⚠️ TÉLÉCHARGER l'artifact AVANT le build
+      # Vite copie public/ → dist/ pendant le build
+      # donc articles.json doit être dans public/ AVANT npm run build
+      - name: 📥 Download articles.json
+        uses: actions/download-artifact@v4
+        with:
+          name: articles-json
+          path: public/
+
+      - name: 📦 Installation des dépendances
+        run: npm ci
+
+      - name: 🔨 Build du projet
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: 🌐 Génération du sitemap
+        run: |
+          node -e "
+          const fs = require('fs');
+          const articles = JSON.parse(fs.readFileSync('public/articles.json', 'utf8'));
+          const baseUrl = 'https://\${{ github.repository_owner }}.github.io/\${{ github.event.repository.name }}';
+          const today = new Date().toISOString().split('T')[0];
+
+          const urls = [
+            \`<url><loc>\${baseUrl}/</loc><lastmod>\${today}</lastmod><changefreq>hourly</changefreq><priority>1.0</priority></url>\`
+          ];
+
+          articles.forEach(a => {
+            urls.push(\`<url><loc>\${baseUrl}/article/\${a.id}</loc><lastmod>\${a.date}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>\`);
+          });
+
+          const sitemap = \`<?xml version='1.0' encoding='UTF-8'?>\n<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>\n\${urls.join('\n')}\n</urlset>\`;
+
+          fs.writeFileSync('dist/sitemap.xml', sitemap);
+          console.log('✅ Sitemap généré avec ' + urls.length + ' URLs');
+          "
+
+      - name: 📄 Génération robots.txt
+        run: |
+          REPO_NAME="${{ github.event.repository.name }}"
+          OWNER="${{ github.repository_owner }}"
+          cat > dist/robots.txt << EOF
+          User-agent: *
+          Allow: /
+          Sitemap: https://${OWNER}.github.io/${REPO_NAME}/sitemap.xml
+          EOF
+          echo "✅ robots.txt généré"
+
+      - name: 🔧 Configuration GitHub Pages (SPA routing)
+        run: |
+          cp dist/index.html dist/404.html
+          echo "✅ 404.html créé pour le routage SPA"
+
+      - name: 📤 Upload artifact Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: 🚀 Déploiement sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: 🎉 Résumé déploiement
+        run: |
+          echo "==================================================="
+          echo "🎉 BabaNews déployé avec succès !"
+          echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
+          echo "📅 Date: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "==================================================="
