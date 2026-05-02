@@ -47,11 +47,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - name: 📦 Upload articles.json
-        uses: actions/upload-artifact@v4
-        with:
-          name: articles-json
-          path: public/articles.json
+      
       - name: 📦 Installation des dépendances bot
         run: |
           # Le bot utilise uniquement des modules Node.js natifs
@@ -116,7 +112,13 @@ jobs:
           echo "📅 Date: $(date -u '+%Y-%m-%d %H:%M UTC')"
           echo "🔄 Articles mis à jour: ${{ steps.check-changes.outputs.changed }}"
           echo "==================================================="
-    
+          
+      - name: 📦 Upload articles.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: articles-json
+          path: public/articles.json
+          
   # ============================================================
   # JOB 2: Build et déploiement sur GitHub Pages
   # ============================================================
@@ -153,11 +155,13 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          
       - name: 📥 Download articles.json
         uses: actions/download-artifact@v4
         with:
           name: articles-json
           path: public/
+          
       - name: 🌐 Génération du sitemap
         run: |
           node -e "
