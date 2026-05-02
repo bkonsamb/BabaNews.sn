@@ -535,9 +535,7 @@ async function runBot() {
       return 0;
     })
     .slice(0, CONFIG.MAX_ARTICLES_PER_DAY);
-// Créer le répertoire s'il n'existe pas
-const publicDir = path.dirname(CONFIG.OUTPUT_PATH);
-mkdirSync(publicDir, { recursive: true });
+
   // Sauvegarde
   writeFileSync(CONFIG.OUTPUT_PATH, JSON.stringify(finalArticles, null, 2), 'utf-8');
   console.log(`💾 Sauvegardé: ${CONFIG.OUTPUT_PATH}`);
