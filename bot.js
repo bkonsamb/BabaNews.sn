@@ -11,7 +11,7 @@
  *  5. Commit + push automatique vers GitHub
  *
  * Variables d'environnement requises :
- *  - GROQ_API_KEY
+ *  - GROQ_API_KEYon
  *  - GITHUB_TOKEN (optionnel, si push auto)
  */
 
@@ -537,9 +537,14 @@ async function runBot() {
     .slice(0, CONFIG.MAX_ARTICLES_PER_DAY);
 
   // Sauvegarde
-const fs = require('fs'); // si pas déjà importé en haut du fichier
-fs.mkdirSync(require('path').dirname(CONFIG.OUTPUT_PATH), { recursive: true }); // ← ajoute cette ligne
-writeFileSync(CONFIG.OUTPUT_PATH, JSON.stringify(finalArticles, null, 2), 'utf-8');
+const fs = require('fs');
+const path = require('path');
+const outputPath = path.join(__dirname, 'public', 'articles.json'); // ← chemin explicite
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  console.log('📂 Écriture vers:', outputPath);
+  console.log('📂 __dirname:', __dirname);
+fs.writeFileSync(outputPath, JSON.stringify(finalArticles, null, 2), 'utf-8');
+console.log(`📁 Sauvegardé: ${outputPath}`);
   console.log(`💾 Sauvegardé: ${CONFIG.OUTPUT_PATH}`);
   console.log(`📊 Total articles publiés: ${finalArticles.length}`);
   console.log('');
