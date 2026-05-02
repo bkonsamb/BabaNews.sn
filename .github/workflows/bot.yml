@@ -66,7 +66,14 @@ jobs:
           echo "🚀 Lancement du bot BabaNews..."
           node bot.js
         timeout-minutes: 10
-
+        
+      - name: 📦 Upload articles.json  # ← doit être juste après le bot
+        uses: actions/upload-artifact@v4
+        with:
+          name: articles-json
+          path: public/articles.json
+          if-no-files-found: error  # ← ajoute ça pour détecter les erreurs de chemin
+          
       - name: 🔍 Vérification des changements
         id: check-changes
         run: |
@@ -113,12 +120,6 @@ jobs:
           echo "🔄 Articles mis à jour: ${{ steps.check-changes.outputs.changed }}"
           echo "==================================================="
           
-      - name: 📦 Upload articles.json
-        uses: actions/upload-artifact@v4
-        with:
-          name: articles-json
-          path: public/articles.json
-          
   # ============================================================
   # JOB 2: Build et déploiement sur GitHub Pages
   # ============================================================
@@ -147,7 +148,13 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-
+          
+      - name: 📥 Download articles.json   # ← remonter ici, avant le build
+        uses: actions/download-artifact@v4
+        with:
+          name: articles-json
+          path: public/
+          
       - name: 📦 Installation des dépendances
         run: npm ci
 
