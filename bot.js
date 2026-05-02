@@ -537,7 +537,9 @@ async function runBot() {
     .slice(0, CONFIG.MAX_ARTICLES_PER_DAY);
 
   // Sauvegarde
-  writeFileSync(CONFIG.OUTPUT_PATH, JSON.stringify(finalArticles, null, 2), 'utf-8');
+const fs = require('fs'); // si pas déjà importé en haut du fichier
+fs.mkdirSync(require('path').dirname(CONFIG.OUTPUT_PATH), { recursive: true }); // ← ajoute cette ligne
+writeFileSync(CONFIG.OUTPUT_PATH, JSON.stringify(finalArticles, null, 2), 'utf-8');
   console.log(`💾 Sauvegardé: ${CONFIG.OUTPUT_PATH}`);
   console.log(`📊 Total articles publiés: ${finalArticles.length}`);
   console.log('');
