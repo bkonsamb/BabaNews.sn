@@ -16,7 +16,7 @@
  */
 
 import { createRequire } from 'module';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import https from 'https';
@@ -31,7 +31,7 @@ const __dirname = path.dirname(__filename);
 // ============================================================
 const CONFIG = {
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
-  GROQ_MODEL: 'llama3-70b-8192',
+  GROQ_MODEL: 'llama-3.1-70b-versatile',
   MAX_ARTICLES_PER_DAY: 10,
   MIN_ARTICLES: 5,
   OUTPUT_PATH: path.resolve(__dirname, '../public/articles.json'),
@@ -535,7 +535,9 @@ async function runBot() {
       return 0;
     })
     .slice(0, CONFIG.MAX_ARTICLES_PER_DAY);
-
+// Créer le répertoire s'il n'existe pas
+const publicDir = path.dirname(CONFIG.OUTPUT_PATH);
+mkdirSync(publicDir, { recursive: true });
   // Sauvegarde
   writeFileSync(CONFIG.OUTPUT_PATH, JSON.stringify(finalArticles, null, 2), 'utf-8');
   console.log(`💾 Sauvegardé: ${CONFIG.OUTPUT_PATH}`);
