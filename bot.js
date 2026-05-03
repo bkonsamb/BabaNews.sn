@@ -279,7 +279,7 @@ function parseRSSFeed(xmlContent) {
     items.push({
       title: title.slice(0, 200),
       link,
-      description: description.slice(0, 500),
+      description: stripHtml(description).slice(0, 500),
       pubDate,
       image,
     });
