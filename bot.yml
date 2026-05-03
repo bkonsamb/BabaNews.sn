@@ -78,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: articles-json
-          path: public/articles.json
+          path: articles.json
           if-no-files-found: error
 
       - name: 🔍 Vérification des changements
