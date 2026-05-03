@@ -202,19 +202,44 @@ function extractImageFromRSS(item) {
   return null;
 }
 
-// ← COLLE ICI (après la ligne 203)
+async function resolveGoogleNewsUrl(url) {
+  try {
+    // Google News redirige vers la source réelle via 301/302
+    return new Promise((resolve) => {
+      const req = https.get(url, { timeout: 5000 }, (res) => {
+        if (res.headers.location) {
+          resolve(res.headers.location);
+        } else {
+          resolve(url);
+        }
+        req.destroy();
+      });
+      req.on('error', () => resolve(url));
+      req.on('timeout', () => { req.destroy(); resolve(url); });
+    });
+  } catch {
+    return url;
+  }
+}
+
 async function fetchOgImage(url) {
   if (!url) return null;
   try {
-    const html = await httpGet(url, 5000);
-    const match = html.match(
-      /<meta[^>]+(?:property="og:image"|name="twitter:image")[^>]+content="([^"]+)"/i
-    ) || html.match(
-      /content="([^"]+)"[^>]+(?:property="og:image"|name="twitter:image")/i
-    );
+    // Si c'est une URL Google News, on résout la vraie URL source
+    const realUrl = url.includes('news.google.com')
+      ? await resolveGoogleNewsUrl(url)
+      : url;
+
+    if (realUrl.includes('news.google.com')) return null; // échec résolution
+
+    const html = await httpGet(realUrl, 6000);
+    const match =
+      html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i) ||
+      html.match(/content="([^"]+)"[^>]+property="og:image"/i) ||
+      html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/i);
+
     const imgUrl = match?.[1]?.trim();
-    if (imgUrl && imgUrl.startsWith('http')) return imgUrl;
-    return null;
+    return imgUrl?.startsWith('http') ? imgUrl : null;
   } catch {
     return null;
   }
