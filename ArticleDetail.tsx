@@ -8,17 +8,50 @@ interface ArticleDetailProps {
   onArticleClick: (id: string) => void;
 }
 
-const FALLBACK_IMAGES: Record<string, string> = {
-  Default: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&q=80',
+const CATEGORY_GRADIENTS: Record<string, string> = {
+  Politique:      'from-blue-800 to-blue-600',
+  Économie:       'from-emerald-800 to-emerald-600',
+  Sport:          'from-orange-700 to-orange-500',
+  Technologie:    'from-violet-800 to-violet-600',
+  Santé:          'from-teal-700 to-teal-500',
+  Éducation:      'from-sky-700 to-sky-500',
+  Environnement:  'from-green-800 to-green-600',
+  Sécurité:       'from-red-900 to-red-700',
+  International:  'from-gray-700 to-gray-500',
+  Culture:        'from-pink-700 to-pink-500',
+  Default:        'from-gray-700 to-gray-500',
 };
+
+const CATEGORY_ICONS: Record<string, string> = {
+  Politique:      '🏛️',
+  Économie:       '📈',
+  Sport:          '⚽',
+  Technologie:    '💻',
+  Santé:          '🏥',
+  Éducation:      '📚',
+  Environnement:  '🌿',
+  Sécurité:       '🛡️',
+  International:  '🌍',
+  Culture:        '🎭',
+  Default:        '📰',
+};
+
+function ImagePlaceholder({ category }: { category: string }) {
+  const gradient = CATEGORY_GRADIENTS[category] || CATEGORY_GRADIENTS['Default'];
+  const icon = CATEGORY_ICONS[category] || CATEGORY_ICONS['Default'];
+  return (
+    <div className={`w-full h-full bg-gradient-to-br ${gradient} flex flex-col items-center justify-center gap-3`}>
+      <span className="text-6xl opacity-80">{icon}</span>
+      <span className="text-white/60 text-sm font-medium uppercase tracking-widest">{category}</span>
+    </div>
+  );
+}
 
 export default function ArticleDetail({ article, relatedArticles, onBack, onArticleClick }: ArticleDetailProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
 
-  const imgSrc = imgError || !article.image
-    ? FALLBACK_IMAGES['Default']
-    : article.image;
+  const hasImage = !imgError && !!article.image;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T12:00:00');
@@ -31,11 +64,7 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
   };
 
   const categoryBadge = CATEGORY_BG[article.category] || CATEGORY_BG['Default'];
-
-  const paragraphs = article.content
-    .split('\n')
-    .filter(p => p.trim().length > 0);
-
+  const paragraphs = article.content.split('\n').filter(p => p.trim().length > 0);
   const estimatedReadTime = Math.ceil(article.content.split(' ').length / 200);
 
   return (
@@ -51,9 +80,7 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
               Accueil
             </button>
             <span>/</span>
-            <button
-              className={`px-2 py-0.5 rounded-sm text-xs font-semibold uppercase tracking-wide ${categoryBadge}`}
-            >
+            <button className={`px-2 py-0.5 rounded-sm text-xs font-semibold uppercase tracking-wide ${categoryBadge}`}>
               {article.category}
             </button>
           </nav>
@@ -65,7 +92,7 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
           {/* Main Article */}
           <div className="lg:col-span-2">
             <article className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-              {/* Article Header */}
+              {/* Header */}
               <div className="p-6 md:p-8 border-b border-gray-100">
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   {article.breaking && (
@@ -104,21 +131,25 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
                 </div>
               </div>
 
-              {/* Article Image */}
+              {/* Image ou placeholder */}
               <div className="relative overflow-hidden h-64 md:h-96">
-                {!imgLoaded && (
-                  <div className="absolute inset-0 image-skeleton" />
+                {hasImage ? (
+                  <>
+                    {!imgLoaded && <div className="absolute inset-0 image-skeleton" />}
+                    <img
+                      src={article.image!}
+                      alt={article.title}
+                      className={`w-full h-full object-cover ${imgLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+                      onLoad={() => setImgLoaded(true)}
+                      onError={() => { setImgError(true); setImgLoaded(true); }}
+                    />
+                  </>
+                ) : (
+                  <ImagePlaceholder category={article.category} />
                 )}
-                <img
-                  src={imgSrc}
-                  alt={article.title}
-                  className={`w-full h-full object-cover ${imgLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-                  onLoad={() => setImgLoaded(true)}
-                  onError={() => { setImgError(true); setImgLoaded(true); }}
-                />
               </div>
 
-              {/* Article Content */}
+              {/* Contenu */}
               <div className="p-6 md:p-8">
                 <div className="prose-article max-w-none">
                   {paragraphs.map((para, index) => (
@@ -135,7 +166,7 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
                   ))}
                 </div>
 
-                {/* Share & Tags */}
+                {/* Partage */}
                 <div className="mt-8 pt-6 border-t border-gray-100">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -174,7 +205,6 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
           {/* Sidebar */}
           <aside className="lg:col-span-1">
             <div className="sidebar-sticky space-y-6">
-              {/* Related Articles */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2" style={{ fontFamily: 'Playfair Display, serif' }}>
                   <span className="w-1 h-6 bg-[#c8102e] rounded-full inline-block"></span>
@@ -196,7 +226,6 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
                 </div>
               </div>
 
-              {/* Newsletter CTA */}
               <div className="bg-gradient-to-br from-[#c8102e] to-[#9b0c23] rounded-2xl p-5 text-white">
                 <h3 className="font-black text-xl mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
                   Newsletter
@@ -214,7 +243,6 @@ export default function ArticleDetail({ article, relatedArticles, onBack, onArti
                 </button>
               </div>
 
-              {/* Categories */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-black text-gray-900 text-lg mb-4 flex items-center gap-2" style={{ fontFamily: 'Playfair Display, serif' }}>
                   <span className="w-1 h-6 bg-[#c8102e] rounded-full inline-block"></span>
