@@ -599,24 +599,34 @@ async function runBot() {
 
   // ── Étape 3 : Génération du contenu via Groq ──
   const newArticles = [];
-  const usedImages = new Set(); 
   for (let i = 0; i < newCandidates.length; i++) {
     const raw = newCandidates[i];
     console.log(`[${i + 1}/${newCandidates.length}] Traitement: "${raw.title.slice(0, 60)}..."`);
 
     const category = detectCategory(raw.title, raw.description);
     const breaking = detectBreaking(raw.title, raw.description);
-    // ← AJOUTE CES LIGNES
-  let image = raw.image || null;
-  if (!image && raw.link) {
-    image = await fetchOgImage(raw.link);
+    let image = null;
+
+// 1. Image depuis RSS
+if (raw.image && raw.image.startsWith("http")) {
+  image = raw.image;
 }
-    // Ignore l'image si déjà utilisée par un autre article
-  if (image && usedImages.has(image)) {
-     console.log(`  ⚠️ Image déjà utilisée, ignorée`);
-    image = null;
+
+// 2. Sinon → récupérer depuis le site source
+if (!image && raw.link) {
+  image = await fetchOgImage(raw.link);
 }
-  if (image) usedImages.add(image);
+
+// 3. Nettoyage (évite logos, icônes, petites images)
+if (image && (image.includes("logo") || image.includes("icon"))) {
+  image = null;
+}
+
+// 4. Si aucune image → ignorer l’article
+if (!image) {
+  console.log("⛔ Pas d'image valide, article ignoré");
+  continue;
+}
 
     try {
       const content = await generateArticleContent(
@@ -629,7 +639,7 @@ async function runBot() {
         title: breaking ? `🔴 URGENT : ${raw.title}` : raw.title,
         summary: stripHtml(summary), 
         content,
-        image: image || '',
+        image: image,
         category,
         date: getTodayString(), // CRITIQUE: toujours généré par le code
         breaking,
