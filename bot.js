@@ -599,7 +599,7 @@ async function runBot() {
 
   // ── Étape 3 : Génération du contenu via Groq ──
   const newArticles = [];
-
+  const usedImages = new Set(); 
   for (let i = 0; i < newCandidates.length; i++) {
     const raw = newCandidates[i];
     console.log(`[${i + 1}/${newCandidates.length}] Traitement: "${raw.title.slice(0, 60)}..."`);
@@ -611,6 +611,12 @@ async function runBot() {
   if (!image && raw.link) {
     image = await fetchOgImage(raw.link);
 }
+    // Ignore l'image si déjà utilisée par un autre article
+  if (image && usedImages.has(image)) {
+     console.log(`  ⚠️ Image déjà utilisée, ignorée`);
+    image = null;
+}
+  if (image) usedImages.add(image);
 
     try {
       const content = await generateArticleContent(
