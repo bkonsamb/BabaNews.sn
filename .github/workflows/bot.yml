@@ -223,6 +223,7 @@ jobs:
       - name: 🚀 Déploiement sur GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        timeout-minutes: 20
 
       - name: 🎉 Résumé déploiement
         run: |
