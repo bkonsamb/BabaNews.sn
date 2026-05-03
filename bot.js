@@ -191,6 +191,9 @@ function extractImageFromRSS(item) {
     /<enclosure[^>]+url="([^"]+)"[^>]+type="image/i,
     /<image><url>([^<]+)<\/url>/i,
     /src="(https?:\/\/[^"]+\.(jpg|jpeg|png|webp)[^"]*)"/i,
+    /<img[^>]+src="(https?:\/\/[^"]+)"/i,
+    /property="og:image"[^>]+content="([^"]+)"/i,
+    /"image"\s*:\s*"(https?:\/\/[^"]+)"/i,
   ];
   for (const pattern of imagePatterns) {
     const match = item.match(pattern);
