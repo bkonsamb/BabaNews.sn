@@ -202,6 +202,24 @@ function extractImageFromRSS(item) {
   return null;
 }
 
+// ← COLLE ICI (après la ligne 203)
+async function fetchOgImage(url) {
+  if (!url) return null;
+  try {
+    const html = await httpGet(url, 5000);
+    const match = html.match(
+      /<meta[^>]+(?:property="og:image"|name="twitter:image")[^>]+content="([^"]+)"/i
+    ) || html.match(
+      /content="([^"]+)"[^>]+(?:property="og:image"|name="twitter:image")/i
+    );
+    const imgUrl = match?.[1]?.trim();
+    if (imgUrl && imgUrl.startsWith('http')) return imgUrl;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function extractFromXML(xml, tag) {
   const cdataPattern = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, 'i');
   const cdataMatch = xml.match(cdataPattern);
@@ -563,6 +581,11 @@ async function runBot() {
 
     const category = detectCategory(raw.title, raw.description);
     const breaking = detectBreaking(raw.title, raw.description);
+    // ← AJOUTE CES LIGNES
+  let image = raw.image || null;
+  if (!image && raw.link) {
+    image = await fetchOgImage(raw.link);
+}
 
     try {
       const content = await generateArticleContent(
@@ -575,7 +598,7 @@ async function runBot() {
         title: breaking ? `🔴 URGENT : ${raw.title}` : raw.title,
         summary,
         content,
-        image: raw.image || '',
+        image: image || '',
         category,
         date: getTodayString(), // CRITIQUE: toujours généré par le code
         breaking,
