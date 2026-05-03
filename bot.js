@@ -49,6 +49,7 @@ const CONFIG = {
   'https://www.seneplus.com/rss.xml',
   'https://www.africa24.com/feed/',
   'https://www.bbc.com/afrique/index.xml',
+  'https://www.senenews.com/feed'
 ],
 
   BREAKING_KEYWORDS: [
