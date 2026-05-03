@@ -504,7 +504,7 @@ async function generateSummary(title, content, apiKey) {
 }
 
 function formatContentWithoutAI(title, description) {
-  const intro = description || title;
+  const intro = stripHtml(description || title);
   return `${intro}
 
 Cette information s'inscrit dans un contexte particulièrement suivi par les observateurs du secteur. Les développements récents témoignent d'une situation en pleine évolution qui mérite une attention soutenue.
@@ -621,7 +621,7 @@ async function runBot() {
       const article = {
         id: generateId(raw.title),
         title: breaking ? `🔴 URGENT : ${raw.title}` : raw.title,
-        summary,
+        summary: stripHtml(summary), 
         content,
         image: image || '',
         category,
