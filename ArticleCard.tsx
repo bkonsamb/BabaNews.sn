@@ -7,31 +7,63 @@ interface ArticleCardProps {
   variant?: 'hero' | 'featured' | 'compact' | 'list';
 }
 
-const FALLBACK_IMAGES: Record<string, string> = {
-  Politique: 'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&q=80',
-  Économie: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80',
-  Sport: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80',
-  Technologie: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&q=80',
-  Santé: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80',
-  Éducation: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
-  Environnement: 'https://images.unsplash.com/photo-1569163139394-de4e5f43e5ca?w=800&q=80',
-  Sécurité: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=800&q=80',
-  International: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&q=80',
-  Default: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&q=80',
+// Couleurs de placeholder par catégorie (gradient CSS, aucune image externe)
+const CATEGORY_GRADIENTS: Record<string, string> = {
+  Politique:      'from-blue-800 to-blue-600',
+  Économie:       'from-emerald-800 to-emerald-600',
+  Sport:          'from-orange-700 to-orange-500',
+  Technologie:    'from-violet-800 to-violet-600',
+  Santé:          'from-teal-700 to-teal-500',
+  Éducation:      'from-sky-700 to-sky-500',
+  Environnement:  'from-green-800 to-green-600',
+  Sécurité:       'from-red-900 to-red-700',
+  International:  'from-gray-700 to-gray-500',
+  Culture:        'from-pink-700 to-pink-500',
+  Default:        'from-gray-700 to-gray-500',
+};
+
+// Icônes par catégorie
+const CATEGORY_ICONS: Record<string, string> = {
+  Politique:      '🏛️',
+  Économie:       '📈',
+  Sport:          '⚽',
+  Technologie:    '💻',
+  Santé:          '🏥',
+  Éducation:      '📚',
+  Environnement:  '🌿',
+  Sécurité:       '🛡️',
+  International:  '🌍',
+  Culture:        '🎭',
+  Default:        '📰',
 };
 
 function getCategoryBadge(category: string) {
   return CATEGORY_BG[category] || CATEGORY_BG['Default'];
 }
 
-function getFallback(category: string) {
-  return FALLBACK_IMAGES[category] || FALLBACK_IMAGES['Default'];
+function getGradient(category: string) {
+  return CATEGORY_GRADIENTS[category] || CATEGORY_GRADIENTS['Default'];
+}
+
+function getIcon(category: string) {
+  return CATEGORY_ICONS[category] || CATEGORY_ICONS['Default'];
+}
+
+// Placeholder stylé quand pas d'image RSS
+function ImagePlaceholder({ category, className = '' }: { category: string; className?: string }) {
+  return (
+    <div className={`w-full h-full bg-gradient-to-br ${getGradient(category)} flex flex-col items-center justify-center gap-2 ${className}`}>
+      <span className="text-4xl opacity-80">{getIcon(category)}</span>
+      <span className="text-white/60 text-xs font-medium uppercase tracking-widest">{category}</span>
+    </div>
+  );
 }
 
 export default function ArticleCard({ article, onClick, variant = 'featured' }: ArticleCardProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
-  const imgSrc = imgError || !article.image ? getFallback(article.category) : article.image;
+
+  const hasImage = !imgError && !!article.image;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T12:00:00');
@@ -48,17 +80,21 @@ export default function ArticleCard({ article, onClick, variant = 'featured' }: 
         className="article-card relative rounded-2xl overflow-hidden cursor-pointer group shadow-lg h-[480px] md:h-[560px]"
         onClick={() => onClick(article.id)}
       >
-        {!imgLoaded && (
-          <div className="absolute inset-0 image-skeleton" />
+        {hasImage ? (
+          <>
+            {!imgLoaded && <div className="absolute inset-0 image-skeleton" />}
+            <img
+              src={article.image!}
+              alt={article.title}
+              className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              loading="lazy"
+              onLoad={() => setImgLoaded(true)}
+              onError={() => { setImgError(true); setImgLoaded(true); }}
+            />
+          </>
+        ) : (
+          <ImagePlaceholder category={article.category} />
         )}
-        <img
-          src={imgSrc}
-          alt={article.title}
-          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-          loading="lazy"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => { setImgError(true); setImgLoaded(true); }}
-        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
           <div className="flex items-center gap-2 mb-3">
@@ -98,15 +134,21 @@ export default function ArticleCard({ article, onClick, variant = 'featured' }: 
         onClick={() => onClick(article.id)}
       >
         <div className="w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
-          {!imgLoaded && <div className="w-full h-full image-skeleton" />}
-          <img
-            src={imgSrc}
-            alt={article.title}
-            className={`w-full h-full object-cover ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            onError={() => { setImgError(true); setImgLoaded(true); }}
-          />
+          {hasImage ? (
+            <>
+              {!imgLoaded && <div className="w-full h-full image-skeleton" />}
+              <img
+                src={article.image!}
+                alt={article.title}
+                className={`w-full h-full object-cover ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                loading="lazy"
+                onLoad={() => setImgLoaded(true)}
+                onError={() => { setImgError(true); setImgLoaded(true); }}
+              />
+            </>
+          ) : (
+            <ImagePlaceholder category={article.category} />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -133,15 +175,21 @@ export default function ArticleCard({ article, onClick, variant = 'featured' }: 
         onClick={() => onClick(article.id)}
       >
         <div className="relative h-44 overflow-hidden">
-          {!imgLoaded && <div className="absolute inset-0 image-skeleton" />}
-          <img
-            src={imgSrc}
-            alt={article.title}
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            onError={() => { setImgError(true); setImgLoaded(true); }}
-          />
+          {hasImage ? (
+            <>
+              {!imgLoaded && <div className="absolute inset-0 image-skeleton" />}
+              <img
+                src={article.image!}
+                alt={article.title}
+                className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                loading="lazy"
+                onLoad={() => setImgLoaded(true)}
+                onError={() => { setImgError(true); setImgLoaded(true); }}
+              />
+            </>
+          ) : (
+            <ImagePlaceholder category={article.category} />
+          )}
           {article.breaking && (
             <span className="absolute top-2 left-2 breaking-badge bg-[#c8102e] text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">
               🔴 Urgent
@@ -172,15 +220,21 @@ export default function ArticleCard({ article, onClick, variant = 'featured' }: 
       onClick={() => onClick(article.id)}
     >
       <div className="relative h-52 overflow-hidden flex-shrink-0">
-        {!imgLoaded && <div className="absolute inset-0 image-skeleton" />}
-        <img
-          src={imgSrc}
-          alt={article.title}
-          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-          loading="lazy"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => { setImgError(true); setImgLoaded(true); }}
-        />
+        {hasImage ? (
+          <>
+            {!imgLoaded && <div className="absolute inset-0 image-skeleton" />}
+            <img
+              src={article.image!}
+              alt={article.title}
+              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              loading="lazy"
+              onLoad={() => setImgLoaded(true)}
+              onError={() => { setImgError(true); setImgLoaded(true); }}
+            />
+          </>
+        ) : (
+          <ImagePlaceholder category={article.category} />
+        )}
         {article.breaking && (
           <span className="absolute top-3 left-3 breaking-badge bg-[#c8102e] text-white text-xs font-bold px-2.5 py-1 rounded-sm uppercase tracking-wide">
             🔴 Urgent
