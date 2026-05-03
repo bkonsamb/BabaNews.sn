@@ -69,8 +69,8 @@ jobs:
       - name: 🔍 Debug — Vérifier les fichiers générés
         run: |
           echo "📂 Répertoire courant: $(pwd)"
-          echo "📁 Contenu de public/:"
-          ls -la public/ || echo "⚠️ Dossier public/ inexistant"
+          echo "📁 Contenu de la racine:"
+          ls -la articles.json || echo "⚠️ articles.json inexistant à la racine"
           echo "🔎 Recherche articles.json:"
           find . -name "articles.json" 2>/dev/null || echo "⚠️ articles.json introuvable"
 
@@ -85,7 +85,7 @@ jobs:
         id: check-changes
         run: |
           # git status --porcelain détecte aussi les fichiers nouveaux (non encore trackés)
-          STATUS=$(git status --porcelain public/articles.json)
+          STATUS=$(git status --porcelain articles.json)
           if [ -z "$STATUS" ]; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "ℹ️ Aucun changement dans articles.json"
@@ -95,7 +95,7 @@ jobs:
             echo "📊 Aperçu du fichier:"
             node -e "
               const fs = require('fs');
-              const articles = JSON.parse(fs.readFileSync('public/articles.json', 'utf8'));
+              const articles = JSON.parse(fs.readFileSync('articles.json', 'utf8'));
               console.log('Nombre d articles:', articles.length);
               articles.forEach((a, i) => {
                 console.log((i+1) + '. [' + a.category + '] ' + a.title.slice(0, 70));
@@ -110,11 +110,11 @@ jobs:
           git config --local user.name "BabaNews Bot 🤖"
           
           # -f force l'ajout même si articles.json est dans .gitignore
-          git add -f public/articles.json
+          git add -f articles.json
           
           ARTICLE_COUNT=$(node -e "
             const fs = require('fs');
-            const d = fs.readFileSync('public/articles.json', 'utf8');
+            const d = fs.readFileSync('articles.json', 'utf8');
             process.stdout.write(JSON.parse(d).length.toString());
           ")
           
@@ -167,7 +167,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: articles-json
-          path: public/
+          path: ./
 
       - name: 📦 Installation des dépendances
         run: npm ci
@@ -181,7 +181,7 @@ jobs:
         run: |
           node -e "
           const fs = require('fs');
-          const articles = JSON.parse(fs.readFileSync('public/articles.json', 'utf8'));
+          const articles = JSON.parse(fs.readFileSync('articles.json', 'utf8'));
           const baseUrl = 'https://\${{ github.repository_owner }}.github.io/\${{ github.event.repository.name }}';
           const today = new Date().toISOString().split('T')[0];
 
@@ -223,6 +223,7 @@ jobs:
       - name: 🚀 Déploiement sur GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        timeout-minutes: 20
 
       - name: 🎉 Résumé déploiement
         run: |
