@@ -39,15 +39,17 @@ const CONFIG = {
   // Chemin de sortie — bot.js est à la racine, public/ aussi
   OUTPUT_PATH: path.join(__dirname, 'articles.json'),
 
-  // Flux RSS à surveiller
   RSS_FEEDS: [
-    'https://news.google.com/rss/search?q=Sénégal&hl=fr&gl=SN&ceid=SN:fr',
-    'https://news.google.com/rss/search?q=Afrique+actualité&hl=fr&gl=FR&ceid=FR:fr',
-    'https://news.google.com/rss/headlines/section/geo/SN?hl=fr&gl=SN&ceid=SN:fr',
-    'https://www.rfi.fr/fr/rss-afrique.xml',
-    'https://www.jeuneafrique.com/feed/',
-    'https://www.aps.sn/feed/',
-  ],
+  // Sources africaines qui incluent og:image dans leur RSS
+  'https://www.rfi.fr/fr/rss-afrique.xml',
+  'https://www.jeuneafrique.com/feed/',
+  'https://www.aps.sn/feed/',
+  'https://www.dakaractu.com/feed/',
+  'https://www.seneweb.com/news/rss.php',
+  'https://www.seneplus.com/rss.xml',
+  'https://www.africa24.com/feed/',
+  'https://www.bbc.com/afrique/index.xml',
+],
 
   BREAKING_KEYWORDS: [
     'urgent', 'alerte', 'crise', 'guerre', 'attentat', 'accident',
@@ -186,15 +188,15 @@ function getTodayString() {
 
 function extractImageFromRSS(item) {
   const imagePatterns = [
-    /<media:content[^>]+url="([^"]+)"/i,
-    /<media:thumbnail[^>]+url="([^"]+)"/i,
-    /<enclosure[^>]+url="([^"]+)"[^>]+type="image/i,
-    /<image><url>([^<]+)<\/url>/i,
-    /src="(https?:\/\/[^"]+\.(jpg|jpeg|png|webp)[^"]*)"/i,
-    /<img[^>]+src="(https?:\/\/[^"]+)"/i,
-    /property="og:image"[^>]+content="([^"]+)"/i,
-    /"image"\s*:\s*"(https?:\/\/[^"]+)"/i,
-  ];
+  /<media:content[^>]+url="([^"]+)"/i,
+  /<media:thumbnail[^>]+url="([^"]+)"/i,
+  /<enclosure[^>]+url="([^"]+)"[^>]+type="image/i,
+  /<image><url>([^<]+)<\/url>/i,
+  /src="(https?:\/\/[^"]+\.(jpg|jpeg|png|webp)[^"]*)"/i,
+  /<img[^>]+src="(https?:\/\/[^"]+)"/i,           // ← ajoute
+  /property="og:image"[^>]+content="([^"]+)"/i,   // ← ajoute
+  /"image"\s*:\s*"(https?:\/\/[^"]+)"/i,          // ← ajoute
+];
   for (const pattern of imagePatterns) {
     const match = item.match(pattern);
     if (match?.[1]?.trim().startsWith('http')) return match[1].trim();
@@ -202,48 +204,6 @@ function extractImageFromRSS(item) {
   return null;
 }
 
-async function resolveGoogleNewsUrl(url) {
-  try {
-    // Google News redirige vers la source réelle via 301/302
-    return new Promise((resolve) => {
-      const req = https.get(url, { timeout: 5000 }, (res) => {
-        if (res.headers.location) {
-          resolve(res.headers.location);
-        } else {
-          resolve(url);
-        }
-        req.destroy();
-      });
-      req.on('error', () => resolve(url));
-      req.on('timeout', () => { req.destroy(); resolve(url); });
-    });
-  } catch {
-    return url;
-  }
-}
-
-async function fetchOgImage(url) {
-  if (!url) return null;
-  try {
-    // Si c'est une URL Google News, on résout la vraie URL source
-    const realUrl = url.includes('news.google.com')
-      ? await resolveGoogleNewsUrl(url)
-      : url;
-
-    if (realUrl.includes('news.google.com')) return null; // échec résolution
-
-    const html = await httpGet(realUrl, 6000);
-    const match =
-      html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i) ||
-      html.match(/content="([^"]+)"[^>]+property="og:image"/i) ||
-      html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/i);
-
-    const imgUrl = match?.[1]?.trim();
-    return imgUrl?.startsWith('http') ? imgUrl : null;
-  } catch {
-    return null;
-  }
-}
 
 function extractFromXML(xml, tag) {
   const cdataPattern = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, 'i');
@@ -605,7 +565,7 @@ async function runBot() {
 
     const category = detectCategory(raw.title, raw.description);
     const breaking = detectBreaking(raw.title, raw.description);
-    let image = null;
+    let image = raw.image || null;
 
 // 1. Image depuis RSS
 if (raw.image && raw.image.startsWith("http")) {
