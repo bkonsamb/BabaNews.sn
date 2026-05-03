@@ -37,7 +37,7 @@ const CONFIG = {
   MIN_ARTICLES_PER_RUN: 2,
 
   // Chemin de sortie — bot.js est à la racine, public/ aussi
-  OUTPUT_PATH: path.join(__dirname, 'public', 'articles.json'),
+  OUTPUT_PATH: path.join(__dirname, 'articles.json'),
 
   // Flux RSS à surveiller
   RSS_FEEDS: [
